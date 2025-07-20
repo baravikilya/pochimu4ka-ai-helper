@@ -8,7 +8,7 @@
 
 @layer base {
   :root {
-    /* Pochimuchka color palette */
+    /* Updated Pochimuchka color palette */
     --background: 220 13% 98%; /* #F9FAFB */
     --foreground: 215 25% 15%; /* #1F2937 */
 
@@ -39,9 +39,11 @@
 
     --radius: 0.75rem;
 
-    /* Pochimuchka specific design tokens */
+    /* Updated design tokens for chromeless experience */
+    --gradient-bg: linear-gradient(135deg, hsl(220 13% 97%) 0%, hsl(220 84% 95%) 100%);
     --gradient-primary: linear-gradient(135deg, hsl(213 94% 68%), hsl(213 94% 58%));
     --shadow-card: 0 4px 6px -1px hsl(220 13% 0% / 0.1), 0 2px 4px -1px hsl(220 13% 0% / 0.06);
+    --shadow-elevated: 0 10px 40px -10px hsl(220 84% 58% / 0.1), 0 0 0 1px hsl(220 13% 91%);
     --shadow-modal: 0 25px 50px -12px hsl(220 13% 0% / 0.25);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -72,7 +74,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary: 213 94% 78%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -90,6 +92,10 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    /* Dark mode specific tokens */
+    --gradient-bg: linear-gradient(135deg, hsl(224 71.4% 4.1%) 0%, hsl(215 27.9% 8%) 100%);
+    --shadow-elevated: 0 10px 40px -10px hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(215 27.9% 16.9%);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -107,7 +113,9 @@
   }
 
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply text-foreground font-inter;
+    background: var(--gradient-bg);
+    min-height: 100vh;
   }
 }
 

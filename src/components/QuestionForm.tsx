@@ -9,13 +9,13 @@ interface QuestionFormProps {
 
 const difficultyLevels = [
   { value: 'Для малышей', label: 'Для малышей', icon: '🧸' },
-  { value: 'Школьник', label: 'Школьник', icon: '🎒' },
-  { value: 'Студент', label: 'Студент', icon: '🎓' },
+  { value: 'Для школьников', label: 'Для школьников', icon: '🎒' },
+  { value: 'Для студентов', label: 'Для студентов', icon: '🎓' },
 ];
 
 const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer }) => {
   const [question, setQuestion] = useState('');
-  const [difficulty, setDifficulty] = useState('Школьник');
+  const [difficulty, setDifficulty] = useState('Для школьников');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,30 +25,18 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Question Input */}
-        <div className="space-y-3">
-          <label htmlFor="question" className="block text-lg font-medium text-foreground">
-            О чём хочешь узнать?
-          </label>
-          <textarea
-            id="question"
-            rows={4}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Напиши свой вопрос здесь..."
-            className="pochimuchka-input resize-none"
-            disabled={isLoading}
-          />
-        </div>
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      {/* Main Title */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+          Получи ответы на любые вопросы
+        </h1>
+      </div>
 
-        {/* Difficulty Selector */}
-        <div className="space-y-3">
-          <label className="block text-lg font-medium text-foreground">
-            Уровень сложности ответа
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Difficulty Selector - directly below title */}
+        <div className="text-center">
+          <div className="flex justify-center flex-wrap gap-6">
             {difficultyLevels.map((level) => (
               <button
                 key={level.value}
@@ -66,6 +54,19 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Question Input */}
+        <div className="space-y-3">
+          <textarea
+            id="question"
+            rows={4}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="? Почему..."
+            className="pochimuchka-input resize-none text-lg"
+            disabled={isLoading}
+          />
         </div>
 
         {/* Submit Button */}
@@ -93,7 +94,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
 
       {/* Answer Display */}
       {(answer || isLoading) && (
-        <div className="mt-8 bg-card border border-border rounded-xl p-6 card-shadow">
+        <div className="mt-8 bg-card border border-border rounded-xl p-6" style={{ boxShadow: 'var(--shadow-elevated)' }}>
           <div className="flex items-center space-x-2 mb-4">
             <Brain className="text-primary" size={24} />
             <h3 className="text-lg font-semibold text-foreground">Ответ:</h3>

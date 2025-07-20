@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import Header from '@/components/Header';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
+import ProfileIcon from '@/components/ProfileIcon';
 import QuestionForm from '@/components/QuestionForm';
 import AuthModal from '@/components/AuthModals';
 import HistoryModal from '@/components/HistoryModal';
+import { generateSlug, generateMetaDescription } from '@/lib/utils';
 
-// Mock interfaces for now - will be replaced with Supabase integration
-interface User {
+interface UserProfile {
   id: string;
+  user_id: string;
   username: string;
+  created_at: string;
 }
 
-interface Query {
+interface UserHistoryQuery {
   id: number;
   question_text: string;
   difficulty_level: string;
@@ -24,6 +28,8 @@ const Index = () => {
   
   // Auth state
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -35,72 +41,144 @@ const Index = () => {
   
   // History state
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [queries, setQueries] = useState<Query[]>([]);
+  const [queries, setQueries] = useState<UserHistoryQuery[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Mock authentication functions (will be replaced with Supabase)
-  const handleLogin = async (username: string, password: string) => {
+  // Initialize auth state
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Load user profile after sign in
+          setTimeout(() => {
+            loadUserProfile(session.user.id);
+          }, 0);
+        } else {
+          setUserProfile(null);
+          setQueries([]);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadUserProfile = async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('pochimuchka.profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (error) {
+          console.error('Error loading profile:', error);
+          return;
+        }
+
+        setUserProfile(data);
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+  };
+
+  // Authentication functions
+  const handleLogin = async (email: string, password: string) => {
     setAuthLoading(true);
     setAuthError(null);
     
     try {
-      // Mock login delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock success
-      setUser({ id: '1', username });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
       setIsLoginOpen(false);
       toast({
         title: 'Добро пожаловать!',
-        description: `Вы успешно вошли как ${username}`,
+        description: 'Вы успешно вошли в систему',
       });
     } catch (error) {
-      setAuthError('Неверное имя пользователя или пароль');
+      setAuthError('Произошла ошибка при входе');
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const handleRegister = async (username: string, password: string) => {
+  const handleRegister = async (email: string, password: string) => {
     setAuthLoading(true);
     setAuthError(null);
     
     try {
-      // Mock registration delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const redirectUrl = `${window.location.origin}/`;
       
-      // Mock success
-      setUser({ id: '1', username });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            username: email.split('@')[0] // Use email prefix as username
+          }
+        }
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
       setIsRegisterOpen(false);
       toast({
         title: 'Регистрация завершена!',
-        description: `Добро пожаловать, ${username}!`,
+        description: 'Проверьте email для подтверждения аккаунта',
       });
     } catch (error) {
-      setAuthError('Пользователь с таким именем уже существует');
+      setAuthError('Произошла ошибка при регистрации');
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setQueries([]);
-    setAnswer(null);
-    toast({
-      title: 'До свидания!',
-      description: 'Вы успешно вышли из системы',
-    });
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: 'До свидания!',
+        description: 'Вы успешно вышли из системы',
+      });
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
-  // Question submission
+  // Question submission with new database logic
   const handleQuestionSubmit = async (question: string, difficulty: string) => {
     setQuestionLoading(true);
     setAnswer(null);
     
     try {
-      // Mock API call to n8n webhook
-      const response = await fetch('/api/webhook/pochimuchka', {
+      // Try to call the n8n webhook
+      const webhookUrl = process.env.REACT_APP_N8N_WEBHOOK_URL || 'https://kosomeeliquom.beget.app/webhook/pochimuchka';
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,23 +189,54 @@ const Index = () => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Не удалось получить ответ от сервера');
+      let answerText: string;
+      if (response.ok) {
+        const data = await response.json();
+        answerText = data.answer;
+      } else {
+        throw new Error('Webhook failed');
       }
 
-      const data = await response.json();
-      setAnswer(data.answer);
+      setAnswer(answerText);
 
-      // If user is logged in, save to history (mock)
-      if (user) {
-        const newQuery: Query = {
-          id: Date.now(),
-          question_text: question,
-          difficulty_level: difficulty,
-          answer_text: data.answer,
-          created_at: new Date().toISOString(),
-        };
-        setQueries(prev => [newQuery, ...prev]);
+      // NEW DATABASE LOGIC: Save to public_content for everyone
+      const slug = generateSlug(question);
+      const metaDescription = generateMetaDescription(answerText);
+
+      try {
+        // Insert into public_content table
+        await supabase
+          .from('pochimuchka.public_content')
+          .insert({
+            slug,
+            question_title: question,
+            answer_html: answerText,
+            difficulty_level: difficulty,
+            meta_description: metaDescription,
+          });
+      } catch (publicError) {
+        console.error('Error saving to public content:', publicError);
+      }
+
+      // IF user is logged in: Save to their private history
+      if (user && session) {
+        try {
+          const { error: historyError } = await supabase
+            .from('pochimuchka.user_history')
+            .insert({
+              user_id: user.id,
+              question_text: question,
+              answer_text: answerText,
+              difficulty_level: difficulty,
+            });
+
+          if (!historyError) {
+            // Reload history after successful insert
+            loadUserHistory();
+          }
+        } catch (historyError) {
+          console.error('Error saving to user history:', historyError);
+        }
       }
 
       toast({
@@ -135,72 +244,122 @@ const Index = () => {
         description: 'Нейросеть успешно ответила на ваш вопрос',
       });
     } catch (error) {
-      // Mock response for demo
+      // Fallback mock response for demo
       const mockAnswer = `Это демонстрационный ответ на уровне "${difficulty}" для вопроса: "${question}". 
 
 В реальном приложении здесь будет ответ от нейросети через n8n webhook. 
 
 Пример ответа зависит от выбранного уровня сложности:
 - Для малышей: простые слова и примеры
-- Школьник: более подробное объяснение
-- Студент: глубокий анализ с терминологией`;
+- Для школьников: более подробное объяснение
+- Для студентов: глубокий анализ с терминологией`;
 
       setAnswer(mockAnswer);
 
-      // If user is logged in, save to history (mock)
-      if (user) {
-        const newQuery: Query = {
-          id: Date.now(),
-          question_text: question,
-          difficulty_level: difficulty,
-          answer_text: mockAnswer,
-          created_at: new Date().toISOString(),
-        };
-        setQueries(prev => [newQuery, ...prev]);
+      // Same database logic for mock answer
+      const slug = generateSlug(question);
+      const metaDescription = generateMetaDescription(mockAnswer);
+
+      try {
+        await supabase
+          .from('pochimuchka.public_content')
+          .insert({
+            slug,
+            question_title: question,
+            answer_html: mockAnswer,
+            difficulty_level: difficulty,
+            meta_description: metaDescription,
+          });
+      } catch (publicError) {
+        console.error('Error saving mock to public content:', publicError);
+      }
+
+      if (user && session) {
+        try {
+          const { error: historyError } = await supabase
+            .from('pochimuchka.user_history')
+            .insert({
+              user_id: user.id,
+              question_text: question,
+              answer_text: mockAnswer,
+              difficulty_level: difficulty,
+            });
+
+          if (!historyError) {
+            loadUserHistory();
+          }
+        } catch (historyError) {
+          console.error('Error saving mock to user history:', historyError);
+        }
       }
     } finally {
       setQuestionLoading(false);
     }
   };
 
+  // Load user history from database
+  const loadUserHistory = async () => {
+    if (!user) return;
+    
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('pochimuchka.user_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading history:', error);
+        return;
+      }
+
+      setQueries(data || []);
+    } catch (error) {
+      console.error('Error loading history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // Load history when opening modal
   const handleOpenHistory = () => {
     setIsHistoryOpen(true);
-    // In real app, this would fetch from Supabase
+    loadUserHistory();
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header
-        isLoggedIn={!!user}
-        username={user?.username}
-        onOpenLogin={() => setIsLoginOpen(true)}
-        onOpenRegister={() => setIsRegisterOpen(true)}
-        onOpenHistory={handleOpenHistory}
-        onLogout={handleLogout}
-      />
-
-      <main className="container mx-auto px-6 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Задай вопрос нейросети 🤖
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Получи ответы на любые вопросы, адаптированные под твой уровень понимания
-          </p>
-        </div>
-
-        <QuestionForm
-          onSubmit={handleQuestionSubmit}
-          isLoading={questionLoading}
-          answer={answer}
+    <div className="min-h-screen">
+      {/* Profile Icon in top-right corner */}
+      <div className="fixed top-4 right-4 z-50">
+        <ProfileIcon
+          isLoggedIn={!!user}
+          username={userProfile?.username}
+          onOpenLogin={() => setIsLoginOpen(true)}
+          onOpenRegister={() => setIsRegisterOpen(true)}
+          onOpenHistory={handleOpenHistory}
+          onLogout={handleLogout}
         />
+      </div>
+
+      {/* Main content container with elevated styling */}
+      <main className="container mx-auto px-6 py-12">
+        <div className="max-w-4xl mx-auto bg-card rounded-2xl p-8" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+          <QuestionForm
+            onSubmit={handleQuestionSubmit}
+            isLoading={questionLoading}
+            answer={answer}
+          />
+        </div>
       </main>
 
       {/* Auth Modals */}
       <AuthModal
         isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setAuthError(null);
+        }}
         onSubmit={handleLogin}
         type="login"
         isLoading={authLoading}
@@ -209,7 +368,10 @@ const Index = () => {
 
       <AuthModal
         isOpen={isRegisterOpen}
-        onClose={() => setIsRegisterOpen(false)}
+        onClose={() => {
+          setIsRegisterOpen(false);
+          setAuthError(null);
+        }}
         onSubmit={handleRegister}
         type="register"
         isLoading={authLoading}
