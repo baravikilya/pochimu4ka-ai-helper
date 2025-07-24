@@ -18,7 +18,7 @@
 
 ```sh
 # 1. Склонируйте репозиторий
-git clone <URL_ВАШЕГО_РЕПОЗИТОРИЯ>
+git clone https://github.com/baravikilya/pochimu4ka-ai-helper
 
 # 2. Перейдите в директорию проекта
 cd pochimuchka-ai-helper
