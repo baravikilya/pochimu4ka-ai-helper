@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  wideOnDesktop?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, wideOnDesktop }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -38,7 +39,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       />
       
       {/* Modal */}
-      <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 modal-shadow animate-scale-in">
+      <div className={`relative bg-card border border-border rounded-2xl p-6 w-full mx-4 modal-shadow animate-scale-in ${wideOnDesktop ? 'max-w-[70vw] md:max-w-[70vw]' : 'max-w-md'}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-foreground">{title}</h2>

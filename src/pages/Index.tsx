@@ -78,10 +78,11 @@ const Index = () => {
 
   const loadUserProfile = async (userId: string) => {
       try {
+        if (!userId) return;
         const { data, error } = await supabase
-          .from('pochimuchka.profiles')
+          .from('profiles')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', userId as any)
           .single();
 
         if (error) {
@@ -89,7 +90,18 @@ const Index = () => {
           return;
         }
 
-        setUserProfile(data);
+        const isProfile =
+          !!data &&
+          typeof data === 'object' &&
+          'id' in data &&
+          'user_id' in data &&
+          'username' in data &&
+          'created_at' in data;
+        if (isProfile) {
+          setUserProfile(data as UserProfile);
+        } else {
+          setUserProfile(null);
+        }
       } catch (error) {
         console.error('Error loading profile:', error);
       }
@@ -174,124 +186,32 @@ const Index = () => {
   const handleQuestionSubmit = async (question: string, difficulty: string) => {
     setQuestionLoading(true);
     setAnswer(null);
-    
     try {
-      // Try to call the n8n webhook
-      const webhookUrl = process.env.REACT_APP_N8N_WEBHOOK_URL || 'https://kosomeeliquom.beget.app/webhook/pochimuchka';
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question,
-          difficulty,
-        }),
+      // Вызываем edge function через supabase.functions.invoke
+      const { data, error } = await supabase.functions.invoke('pochimuchka-ai', {
+        body: { question, difficulty },
       });
-
-      let answerText: string;
-      if (response.ok) {
-        const data = await response.json();
-        answerText = data.answer;
-      } else {
-        throw new Error('Webhook failed');
+      if (error) {
+        console.error('Ошибка при вызове функции:', error);
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось получить ответ от нейросети',
+          variant: 'destructive',
+        });
+        return;
       }
-
-      setAnswer(answerText);
-
-      // NEW DATABASE LOGIC: Save to public_content for everyone
-      const slug = generateSlug(question);
-      const metaDescription = generateMetaDescription(answerText);
-
-      try {
-        // Insert into public_content table
-        await supabase
-          .from('pochimuchka.public_content')
-          .insert({
-            slug,
-            question_title: question,
-            answer_html: answerText,
-            difficulty_level: difficulty,
-            meta_description: metaDescription,
-          });
-      } catch (publicError) {
-        console.error('Error saving to public content:', publicError);
-      }
-
-      // IF user is logged in: Save to their private history
-      if (user && session) {
-        try {
-          const { error: historyError } = await supabase
-            .from('pochimuchka.user_history')
-            .insert({
-              user_id: user.id,
-              question_text: question,
-              answer_text: answerText,
-              difficulty_level: difficulty,
-            });
-
-          if (!historyError) {
-            // Reload history after successful insert
-            loadUserHistory();
-          }
-        } catch (historyError) {
-          console.error('Error saving to user history:', historyError);
-        }
-      }
-
+      setAnswer(data?.answer || 'Нет ответа от нейросети');
       toast({
         title: 'Ответ получен!',
         description: 'Нейросеть успешно ответила на ваш вопрос',
       });
     } catch (error) {
-      // Fallback mock response for demo
-      const mockAnswer = `Это демонстрационный ответ на уровне "${difficulty}" для вопроса: "${question}". 
-
-В реальном приложении здесь будет ответ от нейросети через n8n webhook. 
-
-Пример ответа зависит от выбранного уровня сложности:
-- Для малышей: простые слова и примеры
-- Для школьников: более подробное объяснение
-- Для студентов: глубокий анализ с терминологией`;
-
-      setAnswer(mockAnswer);
-
-      // Same database logic for mock answer
-      const slug = generateSlug(question);
-      const metaDescription = generateMetaDescription(mockAnswer);
-
-      try {
-        await supabase
-          .from('pochimuchka.public_content')
-          .insert({
-            slug,
-            question_title: question,
-            answer_html: mockAnswer,
-            difficulty_level: difficulty,
-            meta_description: metaDescription,
-          });
-      } catch (publicError) {
-        console.error('Error saving mock to public content:', publicError);
-      }
-
-      if (user && session) {
-        try {
-          const { error: historyError } = await supabase
-            .from('pochimuchka.user_history')
-            .insert({
-              user_id: user.id,
-              question_text: question,
-              answer_text: mockAnswer,
-              difficulty_level: difficulty,
-            });
-
-          if (!historyError) {
-            loadUserHistory();
-          }
-        } catch (historyError) {
-          console.error('Error saving mock to user history:', historyError);
-        }
-      }
+      setAnswer('Произошла ошибка при получении ответа.');
+      toast({
+        title: 'Ошибка',
+        description: 'Произошла ошибка при получении ответа от нейросети',
+        variant: 'destructive',
+      });
     } finally {
       setQuestionLoading(false);
     }
@@ -299,22 +219,36 @@ const Index = () => {
 
   // Load user history from database
   const loadUserHistory = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     
     setHistoryLoading(true);
     try {
       const { data, error } = await supabase
-        .from('pochimuchka.user_history')
+        .from('user_history')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id as any)
         .order('created_at', { ascending: false });
+      console.log('user.id:', user.id);
+      console.log('История из supabase:', data);
 
       if (error) {
         console.error('Error loading history:', error);
         return;
       }
 
-      setQueries(data || []);
+      if (Array.isArray(data)) {
+        setQueries((data as unknown as any[]).filter(
+          (item): item is UserHistoryQuery =>
+            item && typeof item === 'object' &&
+            'id' in item &&
+            'question_text' in item &&
+            'difficulty_level' in item &&
+            'answer_text' in item &&
+            'created_at' in item
+        ));
+      } else {
+        setQueries([]);
+      }
     } catch (error) {
       console.error('Error loading history:', error);
     } finally {

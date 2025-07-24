@@ -1,58 +1,10 @@
-# Welcome to your Lovable project
+# Почимучка — Ответы на любые вопросы
 
-## Project info
+Это веб-приложение, созданное для того, чтобы давать понятные и быстрые ответы на любые вопросы с помощью искусственного интеллекта. Проект идеально подходит для детей, школьников и студентов.
 
-**URL**: https://lovable.dev/projects/e7858862-09cf-48a2-aac5-59f5afdb6c14
+## Технологии
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/e7858862-09cf-48a2-aac5-59f5afdb6c14) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+Этот проект построен с использованием:
 
 - Vite
 - TypeScript
@@ -60,14 +12,21 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Как запустить проект локально
 
-Simply open [Lovable](https://lovable.dev/projects/e7858862-09cf-48a2-aac5-59f5afdb6c14) and click on Share -> Publish.
+Следуйте этим шагам, чтобы запустить проект на вашем компьютере:
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+# 1. Склонируйте репозиторий
+git clone <URL_ВАШЕГО_РЕПОЗИТОРИЯ>
 
-Yes, you can!
+# 2. Перейдите в директорию проекта
+cd pochimuchka-ai-helper
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# 3. Установите зависимости
+npm install
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+# 4. Запустите dev-сервер
+npm run dev
+```
+После этого приложение будет доступно по адресу `http://localhost:8080`.

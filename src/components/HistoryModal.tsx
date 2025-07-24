@@ -17,6 +17,60 @@ interface HistoryModalProps {
   isLoading: boolean;
 }
 
+// Функция для удаления markdown-разметки
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, '') // remove code blocks
+    .replace(/`[^`]*`/g, '') // remove inline code
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // bold
+    .replace(/\*([^*]+)\*/g, '$1') // italic
+    .replace(/__([^_]+)__/g, '$1') // bold
+    .replace(/_([^_]+)_/g, '$1') // italic
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
+    .replace(/\!\[(.*?)\]\(.*?\)/g, '') // images
+    .replace(/^#+\s*(.*)/gm, '$1') // headers
+    .replace(/^-\s+/gm, '') // list items
+    .replace(/^\d+\.\s+/gm, '') // numbered list items
+    .replace(/---/g, '') // hr
+    .replace(/>\s?/g, '') // blockquote
+    .replace(/\n{2,}/g, '\n') // multiple newlines
+    .replace(/\n/g, ' ').trim();
+}
+
+// Функция для форматирования plain text с переносами
+function formatPlainText(text: string): React.ReactNode {
+  // Экранируем HTML
+  let safe = text.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] || c));
+  // Двойные переносы — абзацный отступ
+  safe = safe.replace(/\n\n+/g, '<div style="margin-top:1em"></div>');
+  // Одиночные — <br>
+  safe = safe.replace(/\n/g, '<br />');
+  return <span dangerouslySetInnerHTML={{ __html: safe }} />;
+}
+
+function stripMarkdownAndFormat(text: string): React.ReactNode {
+  let plain = text
+    .replace(/```[\s\S]*?```/g, '') // code blocks
+    .replace(/`[^`]*`/g, '') // inline code
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // bold
+    .replace(/\*([^*]+)\*/g, '$1') // italic
+    .replace(/__([^_]+)__/g, '$1') // bold
+    .replace(/_([^_]+)_/g, '$1') // italic
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
+    .replace(/\!\[(.*?)\]\(.*?\)/g, '') // images
+    .replace(/^#+\s*(.*)/gm, '$1') // headers
+    .replace(/^-\s+/gm, '') // list items
+    .replace(/^\d+\.\s+/gm, '') // numbered list items
+    .replace(/---/g, '') // hr
+    .replace(/>\s?/g, '') // blockquote
+    .replace(/^\s+|\s+$/g, ''); // trim
+  // Экранируем HTML
+  plain = plain.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] || c));
+  // Все переносы — <br>
+  plain = plain.replace(/\n+/g, '<br />');
+  return <span dangerouslySetInnerHTML={{ __html: plain }} />;
+}
+
 const HistoryModal: React.FC<HistoryModalProps> = ({
   isOpen,
   onClose,
@@ -38,9 +92,9 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
     switch (difficulty) {
       case 'Для малышей':
         return '🧸';
-      case 'Школьник':
+      case 'Для школьников':
         return '🎒';
-      case 'Студент':
+      case 'Для студентов':
         return '🎓';
       default:
         return '❓';
@@ -48,7 +102,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Моя история запросов">
+    <Modal isOpen={isOpen} onClose={onClose} title="Моя история запросов" wideOnDesktop>
       <div className="max-h-96 overflow-y-auto space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -99,7 +153,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
                   <span className="text-sm font-medium text-accent">Ответ:</span>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed pl-4 border-l-2 border-accent/20">
-                  {query.answer_text}
+                  {stripMarkdownAndFormat(query.answer_text)}
                 </p>
               </div>
             </div>

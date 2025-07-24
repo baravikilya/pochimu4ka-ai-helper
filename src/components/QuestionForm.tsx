@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Send, Loader2, Brain } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import { Send, Loader2, Brain, HelpCircle } from 'lucide-react';
 
 interface QuestionFormProps {
   onSubmit: (question: string, difficulty: string) => Promise<void>;
@@ -12,6 +15,18 @@ const difficultyLevels = [
   { value: 'Для школьников', label: 'Для школьников', icon: '🎒' },
   { value: 'Для студентов', label: 'Для студентов', icon: '🎓' },
 ];
+
+// Функция для добавления пустой строки перед списками, если её нет
+function ensureListSeparation(text: string) {
+  // Добавить пустую строку перед списком, если он идёт сразу после текста или заголовка
+  return text.replace(/([^\n])\n([ \t]*([-*+] |\d+\. ))/g, '$1\n\n$2');
+}
+
+// Функция для исправления переноса после цифры и точки в начале строки
+function fixListNumbering(text: string) {
+  // Убирает перенос строки после цифры и точки в начале строки
+  return text.replace(/^(\s*\d+\.)\s*\n\s+/gm, '$1 ');
+}
 
 const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer }) => {
   const [question, setQuestion] = useState('');
@@ -28,8 +43,8 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
     <div className="w-full max-w-4xl mx-auto space-y-8">
       {/* Main Title */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-          Получи ответы на любые вопросы
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4 font-title">
+          Почимучка — ответы на любые вопросы
         </h1>
       </div>
 
@@ -58,12 +73,16 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
 
         {/* Question Input */}
         <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <HelpCircle className="text-primary" size={24} />
+            <h3 className="text-lg font-semibold text-foreground">Вопрос:</h3>
+          </div>
           <textarea
             id="question"
             rows={4}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="? Почему..."
+            placeholder="Почему трава зеленая?"
             className="pochimuchka-input resize-none text-lg"
             disabled={isLoading}
           />
@@ -84,7 +103,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
             ) : (
               <>
                 <Brain size={20} />
-                <span>Спросить у нейросети</span>
+                <span>Найти ответ</span>
                 <Send size={18} />
               </>
             )}
@@ -94,7 +113,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
 
       {/* Answer Display */}
       {(answer || isLoading) && (
-        <div className="mt-8 bg-card border border-border rounded-xl p-6" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+        <div className="mt-8 bg-card border-2 border-border rounded-xl p-6" style={{ boxShadow: 'var(--shadow-elevated)' }}>
           <div className="flex items-center space-x-2 mb-4">
             <Brain className="text-primary" size={24} />
             <h3 className="text-lg font-semibold text-foreground">Ответ:</h3>
@@ -110,7 +129,16 @@ const QuestionForm: React.FC<QuestionFormProps> = ({ onSubmit, isLoading, answer
             </div>
           ) : (
             <div className="prose prose-sm max-w-none text-foreground">
-              <p className="whitespace-pre-wrap leading-relaxed">{answer}</p>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                components={{
+                  p: ({node, ...props}) => <p style={{marginBottom: '1.25em'}} {...props} />,
+                  br: () => <br style={{margin: 0, padding: 0}} />,
+                  pre: ({node, ...props}) => <pre style={{marginBottom: '1.25em'}} {...props} />,
+                }}
+              >
+                {answer ? fixListNumbering(answer) : ''}
+              </ReactMarkdown>
             </div>
           )}
         </div>

@@ -119,6 +119,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_history: {
+        Row: {
+          id: number;
+          user_id: string;
+          question_text: string;
+          answer_text: string;
+          difficulty_level: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          question_text: string;
+          answer_text: string;
+          difficulty_level: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          question_text?: string;
+          answer_text?: string;
+          difficulty_level?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      },
+      profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          username: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          username: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          username?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      },
     }
     Views: {
       [_ in never]: never
